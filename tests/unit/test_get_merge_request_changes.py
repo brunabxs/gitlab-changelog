@@ -28,7 +28,11 @@ class TestGetMergeRequestChanges(unittest.TestCase):
         self.assertEqual(actual, [])
 
     def test_merge_request_with_commit_sha_must_return_merge_request_changes(self, mock_urlopen):
-        mock_urlopen.return_value = self.mock_read(b'[{"merge_commit_sha": "commit_sha1"}, {"merge_commit_sha": "commit_sha", "source_branch": "source_branch", "target_branch": "target_branch", "description": "description"}]')
+        mock_urlopen.return_value = self.mock_read(str.encode('[{"merge_commit_sha": "commit_sha1"}, '
+                                                              '{"merge_commit_sha": "commit_sha", '
+                                                              '"source_branch": "source_branch", '
+                                                              '"target_branch": "target_branch", '
+                                                              '"description": "description"}]'))
         actual = get_merge_request_changes('https://gitlab.com/api/v4', 'gitlab_token', 'project_id', 'commit_sha')
         self.assertEqual(actual, ['description'])
 

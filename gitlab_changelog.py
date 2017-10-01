@@ -178,7 +178,7 @@ def clean_content(text):
     # remove white spaces
     items = [item.strip() for item in items]
     # remove members reference
-    items = [re.sub(r'^-\s*\[\s*\]\s*@\s*[a-zA-Z0-9\.\-]+', '', item).strip() for item in items]
+    items = [re.sub(r'^-\s*\[[xX\s]*\]\s*@\s*[a-zA-Z0-9\.\-]+', '', item).strip() for item in items]
     # remove starting '- - -', '* * *', '--', '-*', '**'
     items = [re.sub(r'^([-\*]\s*)+', '', item).strip() for item in items]
     # remove empty items

@@ -10,14 +10,12 @@ It is very important to notice that your project CI must be written in Python 3.
 
 You will also need a [Personal Access Token](https://docs.gitlab.com/ee/api/README.html#personal-access-tokens) to retrieve information from your commits to generate the changelog. [This article](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) shows how to create a Personal Access Token.
 
-
-
 ## Usage
 
 1. Copy `gitlab_changelog.py` file to the root of your project.
 2. Create two environment variables (optional):
-    - *GITLAB_API_ENDPOINT*: Must contain the Gitlab API endpoint (e.g.: _https://gitlab.com/api/v4_)
-    - *GITLAB_PERSONAL_ACCESS_TOKEN*: Must contain your Personal Access Token
+    - *GITLAB_API_ENDPOINT*: Must contain the Gitlab endpoint. Do not use / at the end. (e.g.: _https://gitlab.com_)
+    - *GITLAB_PERSONAL_ACCESS_TOKEN*: Must contain your Personal Access Token.
 3. Update your `.gitlab-ci.yml` to execute `gitlab_changelog.py` when a commit is made:
 ```yml
 ...

@@ -21,7 +21,9 @@ class TestGenerateChangelog(unittest.TestCase):
         with mock.patch('gitlab_changelog.open', mock_file_open, create=True):
             generate_changelog('version', 'version_changes', 'file')
 
-        mock_file_open.assert_called_once_with('file', mode='r+')
+        mock_file_open.assert_any_call('file', mode='r')
+        mock_file_open.assert_any_call('file', mode='w')
+        assert mock_file_open.call_count == 2
 
     def test_empty_version_changes_must_raise_no_changes(self):
         mock_file_open = mock.mock_open(read_data='')

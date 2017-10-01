@@ -201,8 +201,9 @@ def generate_changelog(version, version_changes, changelog_file_path):
     # TODO: probably need to import pytz - uncomment test when finished
     if version_changes:
         now = datetime.strftime(datetime.now(), '%a, %b %d %Y %H:%M:%S %z %Z')
-        with open(changelog_file_path, mode='r+') as file:
+        with open(changelog_file_path, mode='r') as file:
             content = file.read()
+        with open(changelog_file_path, mode='w') as file:
             entry_skeleton = '{}\n\n{}\n\n{}\n\n{}'
             changes = '  - {}'.format('\n  - '.join(version_changes))
             file.write(entry_skeleton.format(version, changes, now, content))

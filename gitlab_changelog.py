@@ -13,20 +13,38 @@ class CommitError(Exception):
     """Commit error"""
     pass
 
+
 class InvalidVersion(Exception):
     """Invalid version"""
     pass
 
+
 class PushError(Exception):
     """Push error"""
     pass
+
 
 class TagError(Exception):
     """Tag error"""
     pass
 
 
+def main():
+    """Main function"""
+    import sys
+    argv = sys.argv[1:]
+    publish_version(gitlab_endpoint=argv[0], gitlab_token=argv[1],
+                    project_id=argv[2], commit_sha=argv[3])
+
+
 def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha):
+    """It generates a version for the given project
+
+    :param str gitlab_endpoint: The gitlab api endpoint
+    :param str gitlab_token: The gitlab api token
+    :param str project_id: The project identifier
+    :param str commit_sha: The commit SHA
+    """
     new_version = generate_version(version=get_current_version('CHANGELOG.md'), version_type='patch')
     generate_changelog(version=new_version,
                        version_changes=get_version_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha),
@@ -203,3 +221,7 @@ def git_push():
     return_code = process.wait()
     if return_code != 0:
         raise PushError(return_code)
+
+
+if __name__ == '__main__':
+    main()

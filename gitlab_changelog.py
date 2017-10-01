@@ -131,9 +131,7 @@ def get_merge_request_changes(gitlab_endpoint, gitlab_token, project_id, commit_
     :return: A list containing the merge request relevant changes
     """
     request = Request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
-                      headers={
-                          'PRIVATE-TOKEN': gitlab_token
-                      })
+                      headers={'PRIVATE-TOKEN': gitlab_token})
     response = urlopen(request).read()
     merge_requests = json.loads(response)
 
@@ -141,7 +139,8 @@ def get_merge_request_changes(gitlab_endpoint, gitlab_token, project_id, commit_
         if merge_request.get('merge_commit_sha') == commit_sha:
             if merge_request.get('description'):
                 return [merge_request.get('description')]
-                # TODO: remove merge request title and other changes that should not compose the merge request description
+                # TODO: remove merge request title and other changes that should not compose the merge
+                # request description
             break
     return []
 
@@ -157,9 +156,7 @@ def get_commit_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha):
     :return: A list containing the commit relevant changes
     """
     request = Request('{}/api/v4/projects/{}/repository/commits/{}'.format(gitlab_endpoint, project_id, commit_sha),
-                      headers={
-                          'PRIVATE-TOKEN': gitlab_token
-                      })
+                      headers={'PRIVATE-TOKEN': gitlab_token})
     response = urlopen(request).read()
     commit = json.loads(response)
     return [commit.get('title')] if commit.get('title') else []

@@ -3,7 +3,7 @@
 
 import unittest
 
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest import mock
 
 from gitlab_changelog import generate_changelog
@@ -39,7 +39,9 @@ class TestGenerateChangelog(unittest.TestCase):
     #     with mock.patch('gitlab_changelog.open', mock_file_open, create=True):
     #         generate_changelog('version', 'version_changes', 'file')
     #     handle = mock_file_open()
-    #     handle.write.assert_called_once_with('version\n  version_changes\nWed, Feb 15 2017 13:05:12 -0300 UTC\n\nold_version')
+    #     handle.write.assert_called_once_with(
+    #         'version\n  version_changes\nWed, Feb 15 2017 13:05:12 -0300 UTC\n\nold_version')
+
 
 if __name__ == '__main__':
     unittest.main()

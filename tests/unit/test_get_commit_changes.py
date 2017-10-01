@@ -18,7 +18,7 @@ class TestGetCommitChanges(unittest.TestCase):
         return mock_read
 
     # TODO: must test when no commit with sha is found
-    
+
     def test_commit_with_commit_sha_must_return_commit_changes(self, mock_urlopen):
         mock_urlopen.return_value = self.mock_read(b'{"title": "title"}')
         actual = get_commit_changes('https://gitlab.com/api/v4', 'gitlab_token', 'project_id', 'commit_sha')

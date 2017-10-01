@@ -11,7 +11,7 @@ from gitlab_changelog import get_merge_request_changes
 @mock.patch('gitlab_changelog.urlopen')
 class TestGetMergeRequestChanges(unittest.TestCase):
     """This class tests the get_merge_request_changes method"""
-    
+
     def mock_read(self, return_value):
         mock_read = mock.MagicMock()
         mock_read.read.return_value = return_value

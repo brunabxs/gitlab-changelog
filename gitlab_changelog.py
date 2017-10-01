@@ -19,6 +19,11 @@ class InvalidVersion(Exception):
     pass
 
 
+class NoChanges(Exception):
+    """No Changes"""
+    pass
+
+
 class PushError(Exception):
     """Push error"""
     pass
@@ -173,13 +178,18 @@ def generate_changelog(version, version_changes, changelog_file_path):
     :param str version: The version
     :param str version_changes: The version changes
     :param str changelog_file: The chagelog file path
+    :raise NoChanges: If version changes is empty
     """
     # TODO: probably need to import pytz - uncomment test when finished
-    now = datetime.strftime(datetime.now(), '%a, %b %d %Y %H:%M:%S %z %Z')
-    with open(changelog_file_path, mode='wr') as file:
-        content = file.read()
-        entry_skeleton = '{}\n  {}\n{}\n\n{}'
-        file.write(entry_skeleton.format(version, version_changes, now, content))
+    if version_changes:
+        now = datetime.strftime(datetime.now(), '%a, %b %d %Y %H:%M:%S %z %Z')
+        with open(changelog_file_path, mode='r+') as file:
+            content = file.read()
+            entry_skeleton = '{}\n{}\n{}\n\n{}'
+            changes = '  - {}'.format('\n  - '.join(version_changes))
+            file.write(entry_skeleton.format(version, changes, now, content))
+    else:
+        raise NoChanges()
 
 
 def git_commit():

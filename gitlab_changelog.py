@@ -143,9 +143,7 @@ def get_merge_request_changes(gitlab_endpoint, gitlab_token, project_id, commit_
     for merge_request in merge_requests:
         if merge_request.get('merge_commit_sha') == commit_sha:
             if merge_request.get('description'):
-                return [merge_request.get('description')]
-                # TODO: remove merge request title and other changes that should not compose the merge
-                # request description
+                return clean_content(merge_request.get('description'))
             break
     return []
 
@@ -164,7 +162,27 @@ def get_commit_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha):
                       headers={'PRIVATE-TOKEN': gitlab_token})
     response = urlopen(request).read()
     commit = json.loads(response)
-    return [commit.get('title')] if commit.get('title') else []
+    return clean_content(commit.get('title'))
+
+
+def clean_content(text):
+    """It split the given text into a list of items and keeps only those items that represents version changes
+
+    :param str text: The text
+    :rtype: list
+    :return: A list containing relevant version changes
+    """
+    if not text:
+        return []
+    items = text.split('\n')
+    # remove white spaces
+    items = [item.strip() for item in items]
+    # remove members reference
+    items = [re.sub(r'^-\s*\[\s*\]\s*@\s*[a-zA-Z0-9\.\-]+', '', item).strip() for item in items]
+    # remove starting '- - -', '* * *', '--', '-*', '**'
+    items = [re.sub(r'^([-\*]\s*)+', '', item).strip() for item in items]
+    # remove empty items
+    return [item for item in items if item]
 
 
 def generate_changelog(version, version_changes, changelog_file_path):

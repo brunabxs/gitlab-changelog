@@ -185,7 +185,7 @@ def generate_changelog(version, version_changes, changelog_file_path):
         now = datetime.strftime(datetime.now(), '%a, %b %d %Y %H:%M:%S %z %Z')
         with open(changelog_file_path, mode='r+') as file:
             content = file.read()
-            entry_skeleton = '{}\n{}\n{}\n\n{}'
+            entry_skeleton = '{}\n\n{}\n\n{}\n\n{}'
             changes = '  - {}'.format('\n  - '.join(version_changes))
             file.write(entry_skeleton.format(version, changes, now, content))
     else:

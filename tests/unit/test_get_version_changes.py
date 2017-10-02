@@ -4,12 +4,27 @@
 import unittest
 
 from unittest import mock
+from urllib.error import HTTPError
 
 from gitlab_changelog import get_version_changes
 
 
 class TestGetVersionChanges(unittest.TestCase):
     """This class tests the get_version_changes method"""
+
+    @mock.patch('gitlab_changelog.get_merge_request_changes', side_effect=HTTPError('url', 'cde', 'msg', 'hdrs', 'fp'))
+    @mock.patch('gitlab_changelog.get_commit_changes')
+    def test_error_on_merge_request_request_must_raise_http_error(self, mock_get_merge_request_changes,
+                                                                  mock_get_commit_changes):
+        with self.assertRaises(HTTPError):
+            get_version_changes('https://gitlab.com/api/v4', 'gitlab_token', 'project_id', 'commit_sha')
+
+    @mock.patch('gitlab_changelog.get_merge_request_changes', return_value=[])
+    @mock.patch('gitlab_changelog.get_commit_changes', side_effect=HTTPError('url', 'cde', 'msg', 'hdrs', 'fp'))
+    def test_error_on_commit_request_must_raise_http_error(self, mock_get_merge_request_changes,
+                                                           mock_get_commit_changes):
+        with self.assertRaises(HTTPError):
+            get_version_changes('https://gitlab.com/api/v4', 'gitlab_token', 'project_id', 'commit_sha')
 
     @mock.patch('gitlab_changelog.get_merge_request_changes', return_value=['changes'])
     @mock.patch('gitlab_changelog.get_commit_changes')

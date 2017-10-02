@@ -4,6 +4,7 @@
 import unittest
 
 from unittest import mock
+from urllib.error import HTTPError
 
 from gitlab_changelog import get_commit_changes
 
@@ -18,12 +19,15 @@ class TestGetCommitChanges(unittest.TestCase):
         mock_read.read.return_value = return_value
         return mock_read
 
-    # TODO: must test when no commit with sha is found
-
     def test_must_call_clean_content(self, mock_urlopen, mock_clean_content):
         mock_urlopen.return_value = self.mock_read(b'{"title": "title"}')
         get_commit_changes('https://gitlab.com/api/v4', 'gitlab_token', 'project_id', 'commit_sha')
         mock_clean_content.assert_called_once_with('title')
+
+    def test_error_on_request_must_raise_http_error(self, mock_urlopen, mock_clean_content):
+        mock_urlopen.side_effect = HTTPError('url', 'cde', 'msg', 'hdrs', 'fp')
+        with self.assertRaises(HTTPError):
+            get_commit_changes('https://gitlab.com/api/v4', 'gitlab_token', 'project_id', 'commit_sha')
 
     def test_commit_with_commit_sha_must_return_commit_changes(self, mock_urlopen, mock_clean_content):
         mock_urlopen.return_value = self.mock_read(b'{"title": "title"}')

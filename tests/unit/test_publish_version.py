@@ -4,6 +4,7 @@
 import unittest
 
 from unittest import mock
+from urllib.error import HTTPError
 
 from gitlab_changelog import publish_version, CommitError, PushError, TagError
 
@@ -36,13 +37,31 @@ class TestPublishVersion(unittest.TestCase):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha')
         mock_get_version_changes.assert_called_once()
 
-    def test_must_call_generate_changelog_once(self, mock_get_current_version, mock_generate_version,
-                                               mock_get_version_changes, mock_generate_changelog,
-                                               mock_git_commit, mock_git_tag, mock_git_push):
+    def test_get_version_succeeds_must_call_generate_changelog_once(self, mock_get_current_version,
+                                                                    mock_generate_version, mock_get_version_changes,
+                                                                    mock_generate_changelog, mock_git_commit,
+                                                                    mock_git_tag, mock_git_push):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha')
         mock_generate_changelog.assert_called_once_with(version='1.2.3-rc.1',
                                                         version_changes=['change'],
                                                         changelog_file_path='CHANGELOG.md')
+
+    def test_get_version_fails_must_raise_http_error(self, mock_get_current_version,
+                                                     mock_generate_version, mock_get_version_changes,
+                                                     mock_generate_changelog, mock_git_commit,
+                                                     mock_git_tag, mock_git_push):
+        mock_get_version_changes.side_effect = HTTPError('url', 'cde', 'msg', 'hdrs', 'fp')
+        with self.assertRaises(HTTPError):
+            publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha')
+
+    def test_get_version_fails_must_not_call_generate_changelog_once(self, mock_get_current_version,
+                                                                     mock_generate_version, mock_get_version_changes,
+                                                                     mock_generate_changelog, mock_git_commit,
+                                                                     mock_git_tag, mock_git_push):
+        mock_get_version_changes.side_effect = HTTPError('url', 'cde', 'msg', 'hdrs', 'fp')
+        with self.assertRaises(HTTPError):
+            self.assertFalse(mock_generate_changelog.called, publish_version(
+                'gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha'))
 
     def test_must_call_git_commit_once(self, mock_get_current_version, mock_generate_version,
                                        mock_get_version_changes, mock_generate_changelog,

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import argparse
 import json
 import re
 import subprocess
@@ -34,12 +35,10 @@ class TagError(Exception):
     pass
 
 
-def main():
+def main(args):
     """Main function"""
-    import sys
-    argv = sys.argv[1:]
-    publish_version(gitlab_endpoint=argv[0], gitlab_token=argv[1],
-                    project_id=argv[2], commit_sha=argv[3])
+    publish_version(gitlab_endpoint=args['gitlab_endpoint'], gitlab_token=args['gitlab_token'],
+                    project_id=args['project_id'], commit_sha=args['commit_sha'])
 
 
 def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha):
@@ -49,6 +48,7 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha):
     :param str gitlab_token: The gitlab api token
     :param str project_id: The project identifier
     :param str commit_sha: The commit SHA
+    :raise HTTPError: If there is an error in HTTP request
     """
     new_version = generate_version(version=get_current_version('CHANGELOG.md'), version_type='patch')
     generate_changelog(version=new_version,
@@ -115,13 +115,11 @@ def get_version_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha):
     :param str commit_sha: The commit SHA
     :rtype: list
     :return: A list containing the relevant changes since last version or None
+    :raise HTTPError: If there is an error in HTTP request
     """
-    merge_request_changes = get_merge_request_changes(
-        gitlab_endpoint, gitlab_token, project_id, commit_sha)
-
+    merge_request_changes = get_merge_request_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha)
     if merge_request_changes:
         return merge_request_changes
-
     return get_commit_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha)
 
 
@@ -134,6 +132,7 @@ def get_merge_request_changes(gitlab_endpoint, gitlab_token, project_id, commit_
     :param str commit_sha: The commit SHA
     :rtype: list
     :return: A list containing the merge request relevant changes
+    :raise HTTPError: If there is an error in HTTP request
     """
     request = Request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
                       headers={'PRIVATE-TOKEN': gitlab_token})
@@ -157,6 +156,7 @@ def get_commit_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha):
     :param str commit_sha: The commit SHA
     :rtype: list
     :return: A list containing the commit relevant changes
+    :raise HTTPError: If there is an error in HTTP request
     """
     request = Request('{}/api/v4/projects/{}/repository/commits/{}'.format(gitlab_endpoint, project_id, commit_sha),
                       headers={'PRIVATE-TOKEN': gitlab_token})
@@ -250,4 +250,14 @@ def git_push():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Generate changelog for a given commit')
+
+    parser.add_argument('-ge', '--gitlab_endpoint', dest='gitlab_endpoint', type=str,
+                        help='The gitlab api endpoint')
+    parser.add_argument('-gt', '--gitlab_token', dest='gitlab_token', type=str,
+                        help='The gitlab public access token')
+    parser.add_argument('-proj', '--project_id', dest='project_id', type=str,
+                        help='The gitlab project identifier')
+    parser.add_argument('-sha', '--commit_sha', dest='commit_sha', type=str,
+                        help='The commit SHA')
+    main(vars(parser.parse_args()))

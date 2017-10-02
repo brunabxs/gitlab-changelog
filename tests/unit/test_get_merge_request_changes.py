@@ -4,6 +4,7 @@
 import unittest
 
 from unittest import mock
+from urllib.error import HTTPError
 
 from gitlab_changelog import get_merge_request_changes
 
@@ -17,6 +18,11 @@ class TestGetMergeRequestChanges(unittest.TestCase):
         mock_read = mock.MagicMock()
         mock_read.read.return_value = return_value
         return mock_read
+
+    def test_error_on_request_must_raise_http_error(self, mock_urlopen, mock_clean_content):
+        mock_urlopen.side_effect = HTTPError('url', 'cde', 'msg', 'hdrs', 'fp')
+        with self.assertRaises(HTTPError):
+            get_merge_request_changes('https://gitlab.com/api/v4', 'gitlab_token', 'project_id', 'commit_sha')
 
     def test_no_merge_request_must_not_call_clean_content(self, mock_urlopen, mock_clean_content):
         mock_urlopen.return_value = self.mock_read(b'[]')

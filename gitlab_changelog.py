@@ -38,22 +38,25 @@ class TagError(Exception):
 def main(args):
     """Main function"""
     publish_version(gitlab_endpoint=args['gitlab_endpoint'], gitlab_token=args['gitlab_token'],
-                    project_id=args['project_id'], commit_sha=args['commit_sha'])
+                    project_id=args['project_id'], commit_sha=args['commit_sha'],
+                    target_branch=args['target_branch'], changelog_file_path=args['changelog_file_path'])
 
 
-def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha):
+def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, target_branch, changelog_file_path):
     """It generates a version for the given project
 
     :param str gitlab_endpoint: The gitlab api endpoint
     :param str gitlab_token: The gitlab api token
     :param str project_id: The project identifier
     :param str commit_sha: The commit SHA
+    :param str target_branch: The target branch name
+    :param str changelog_file_path: The changelog file path
     :raise HTTPError: If there is an error in HTTP request
     """
-    new_version = generate_version(version=get_current_version('CHANGELOG.md'), version_type='patch')
+    new_version = generate_version(version=get_current_version(changelog_file_path), version_type='patch')
     generate_changelog(version=new_version,
                        version_changes=get_version_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha),
-                       changelog_file_path='CHANGELOG.md')
+                       changelog_file_path=changelog_file_path)
     git_commit()
     git_tag(new_version)
     git_push()
@@ -253,11 +256,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate changelog for a given commit')
 
     parser.add_argument('-ge', '--gitlab_endpoint', dest='gitlab_endpoint', type=str,
-                        help='The gitlab api endpoint')
+                        help='The gitlab api endpoint', required=True)
     parser.add_argument('-gt', '--gitlab_token', dest='gitlab_token', type=str,
-                        help='The gitlab public access token')
+                        help='The gitlab public access token', required=True)
     parser.add_argument('-proj', '--project_id', dest='project_id', type=str,
-                        help='The gitlab project identifier')
+                        help='The gitlab project identifier', required=True)
     parser.add_argument('-sha', '--commit_sha', dest='commit_sha', type=str,
-                        help='The commit SHA')
+                        help='The commit SHA', required=True)
+    parser.add_argument('-b', '--target_branch', dest='target_branch', type=str,
+                        help='The commit target branch', required=True)
+    parser.add_argument('-f', '--changelog_file', dest='changelog_file_path', type=str,
+                        help='The changelog file path', default='CHANGELOG.md')
     main(vars(parser.parse_args()))

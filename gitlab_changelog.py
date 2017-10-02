@@ -62,7 +62,7 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     generate_changelog(version=new_version,
                        version_changes=get_version_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha),
                        changelog_file_path=changelog_file_path)
-    git_commit()
+    git_commit(target_branch)
     git_tag(new_version)
     git_push()
 
@@ -219,12 +219,14 @@ def generate_changelog(version, version_changes, changelog_file_path):
         raise NoChanges()
 
 
-def git_commit():
+def git_commit(target_branch):
     """It commits the changelog changes
 
+    :param str target_branch: The target branch name
     :raise CommitError: If any error happends during commit
     """
-    process = subprocess.Popen(['git', 'commit', '-am', 'Update changelog'], stdout=subprocess.PIPE)
+    process = subprocess.Popen(['git', 'commit', '-am', 'Update changelog ({})'.format(target_branch)],
+                               stdout=subprocess.PIPE)
     return_code = process.wait()
     if return_code != 0:
         raise CommitError(return_code)

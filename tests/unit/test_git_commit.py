@@ -20,13 +20,14 @@ class TestGitCommit(unittest.TestCase):
 
     def test_must_call_git_commit(self, mock_popen):
         mock_popen.return_value = self.mock_process(0)
-        git_commit()
-        mock_popen.assert_called_once_with(['git', 'commit', '-am', 'Update changelog'], stdout=subprocess.PIPE)
+        git_commit('branch')
+        mock_popen.assert_called_once_with(['git', 'commit', '-am', 'Update changelog (branch)'],
+                                           stdout=subprocess.PIPE)
 
     def test_process_return_code_not_zero_must_raise_commit_error(self, mock_popen):
         mock_popen.return_value = self.mock_process(123)
         with self.assertRaises(CommitError):
-            git_commit()
+            git_commit('branch')
 
 
 if __name__ == '__main__':

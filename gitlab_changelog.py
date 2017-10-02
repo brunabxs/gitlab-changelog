@@ -66,7 +66,7 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     git_commit(target_branch)
     git_tag(new_version)
     git_push()
-    git_new_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, new_version_changes)
+    git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, new_version_changes)
 
 
 def get_current_version(changelog_file_path):
@@ -145,7 +145,7 @@ def get_merge_request_changes(gitlab_endpoint, gitlab_token, project_id, commit_
     :raise HTTPError: If there is an error in HTTP request
     """
     request = Request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
-                      headers={'PRIVATE-TOKEN': gitlab_token})
+                      headers={'PRIVATE-TOKEN': gitlab_token}, method='GET')
     response = urlopen(request).read()
     merge_requests = json.loads(response)
 
@@ -169,7 +169,7 @@ def get_commit_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha):
     :raise HTTPError: If there is an error in HTTP request
     """
     request = Request('{}/api/v4/projects/{}/repository/commits/{}'.format(gitlab_endpoint, project_id, commit_sha),
-                      headers={'PRIVATE-TOKEN': gitlab_token})
+                      headers={'PRIVATE-TOKEN': gitlab_token}, method='GET')
     response = urlopen(request).read()
     commit = json.loads(response)
     return clean_content(commit.get('title'))
@@ -261,21 +261,39 @@ def git_push():
         raise PushError(return_code)
 
 
-def git_new_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, version_changes):
-    """It creates merge requests depending on the target branch
+def git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, version_changes):
+    """It creates and approves a merge request depending on the target branch
 
     :param str gitlab_endpoint: The gitlab api endpoint
     :param str gitlab_token: The gitlab api token
     :param str project_id: The project identifier
     :param str target_branch: The target branch name
     :param str version_changes: The version changes
+    :rtype: str
+    :return: The created merge request iid
     :raise HTTPError: If there is an error in HTTP request
     """
     if target_branch != 'master':
         return
+    merge_request_iid = git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_changes)
+    git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_request_iid)
+
+
+def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_changes):
+    """It creates a merge request depending on the target branch
+
+    :param str gitlab_endpoint: The gitlab api endpoint
+    :param str gitlab_token: The gitlab api token
+    :param str project_id: The project identifier
+    :param str version_changes: The version changes
+    :rtype: str
+    :return: The created merge request iid
+    :raise HTTPError: If there is an error in HTTP request
+    """
     # TODO: Parameterize user info
     request = Request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
                       headers={'PRIVATE-TOKEN': gitlab_token, 'content-type': 'application/json'},
+                      method='POST',
                       data=json.dumps({'source_branch': 'master', 'target_branch': 'develop',
                                        'title': 'Automatic merge branch \'master\' into \'develop\'',
                                        'description': '- {}\n\n- - - \n\n- [ ] @brunabxs'
@@ -283,14 +301,25 @@ def git_new_merge_request(gitlab_endpoint, gitlab_token, project_id, target_bran
                                .encode('utf-8'))
     response = urlopen(request).read()
     merge_request = json.loads(response)
+    return merge_request['iid']
 
+
+def git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_request_iid):
+    """It accepts a merge request
+
+    :param str gitlab_endpoint: The gitlab api endpoint
+    :param str gitlab_token: The gitlab api token
+    :param str project_id: The project identifier
+    :param str merge_request_iid: The merge request iid to approve
+    :raise HTTPError: If there is an error in HTTP request
+    """
     request = Request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id,
-                                                                             merge_request['iid']),
+                                                                             merge_request_iid),
                       headers={'PRIVATE-TOKEN': gitlab_token}, method='PUT',
-                      data=json.dumps({'merge_commit_message ': 'Automatic merge branch \'master\' into \'develop\''})
+                      data=json.dumps({'merge_commit_message': 'Automatic merge branch \'master\' into \'develop\''})
                                .encode('utf-8'))
     response = urlopen(request).read()
-    merge_request = json.loads(response)
+    json.loads(response)
 
 
 if __name__ == '__main__':

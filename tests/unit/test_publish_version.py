@@ -25,9 +25,17 @@ class TestPublishVersion(unittest.TestCase):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file')
         mock_get_current_version.assert_called_once()
 
-    def test_must_call_generate_version_once(self, mock_get_current_version, mock_generate_version,
-                                             mock_get_version_changes, mock_generate_changelog,
-                                             mock_git_commit, mock_git_tag, mock_git_push):
+    def test_branch_develop_must_call_generate_version_with_rc(self, mock_get_current_version,
+                                                               mock_generate_version, mock_get_version_changes,
+                                                               mock_generate_changelog, mock_git_commit,
+                                                               mock_git_tag, mock_git_push):
+        publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'develop', 'file')
+        mock_generate_version.assert_called_once_with(version='1.2.3', version_type='rc')
+
+    def test_branch_not_develop_must_call_generate_version_with_patch(self, mock_get_current_version,
+                                                                      mock_generate_version, mock_get_version_changes,
+                                                                      mock_generate_changelog, mock_git_commit,
+                                                                      mock_git_tag, mock_git_push):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file')
         mock_generate_version.assert_called_once_with(version='1.2.3', version_type='patch')
 

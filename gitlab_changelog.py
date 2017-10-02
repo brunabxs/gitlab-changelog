@@ -53,7 +53,12 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     :param str changelog_file_path: The changelog file path
     :raise HTTPError: If there is an error in HTTP request
     """
-    new_version = generate_version(version=get_current_version(changelog_file_path), version_type='patch')
+    # TODO: define when version type will be major, minor or patch
+    version_type = 'patch'
+    if target_branch == 'develop':
+        version_type = 'rc'
+
+    new_version = generate_version(version=get_current_version(changelog_file_path), version_type=version_type)
     generate_changelog(version=new_version,
                        version_changes=get_version_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha),
                        changelog_file_path=changelog_file_path)

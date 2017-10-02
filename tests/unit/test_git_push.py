@@ -20,18 +20,18 @@ class TestGitPush(unittest.TestCase):
 
     def test_must_call_git_push(self, mock_popen):
         mock_popen.return_value = self.mock_process(0)
-        git_push()
-        mock_popen.assert_any_call(['git', 'push', 'origin', 'master'], stdout=subprocess.PIPE)
+        git_push('target_branch')
+        mock_popen.assert_any_call(['git', 'push', 'origin', 'target_branch'], stdout=subprocess.PIPE)
 
     def test_must_call_git_push_tags(self, mock_popen):
         mock_popen.return_value = self.mock_process(0)
-        git_push()
-        mock_popen.assert_any_call(['git', 'push', 'origin', 'master', '--tags'], stdout=subprocess.PIPE)
+        git_push('target_branch')
+        mock_popen.assert_any_call(['git', 'push', 'origin', 'target_branch', '--tags'], stdout=subprocess.PIPE)
 
     def test_process_return_code_not_zero_must_raise_push_error(self, mock_popen):
         mock_popen.return_value = self.mock_process(123)
         with self.assertRaises(PushError):
-            git_push()
+            git_push('target_branch')
 
 
 if __name__ == '__main__':

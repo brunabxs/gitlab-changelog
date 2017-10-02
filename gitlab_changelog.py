@@ -4,6 +4,7 @@
 import argparse
 import json
 import re
+import ssl
 import subprocess
 
 from datetime import datetime
@@ -53,19 +54,18 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     :param str changelog_file_path: The changelog file path
     :raise HTTPError: If there is an error in HTTP request
     """
-    # TODO: define when version type will be major, minor or patch
+    # TODO: define when version type is major, minor or patch
     version_type = 'patch'
     if target_branch == 'develop':
         version_type = 'rc'
 
     new_version = generate_version(version=get_current_version(changelog_file_path), version_type=version_type)
     new_version_changes = get_version_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha)
-    generate_changelog(version=new_version,
-                       version_changes=new_version_changes,
+    generate_changelog(version=new_version, version_changes=new_version_changes,
                        changelog_file_path=changelog_file_path)
     git_commit(target_branch)
     git_tag(new_version)
-    git_push()
+    git_push(target_branch)
     git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, new_version_changes)
 
 
@@ -144,11 +144,8 @@ def get_merge_request_changes(gitlab_endpoint, gitlab_token, project_id, commit_
     :return: A list containing the merge request relevant changes
     :raise HTTPError: If there is an error in HTTP request
     """
-    request = Request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
-                      headers={'PRIVATE-TOKEN': gitlab_token}, method='GET')
-    response = urlopen(request).read()
-    merge_requests = json.loads(response)
-
+    merge_requests = _request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
+                              gitlab_token=gitlab_token, method='GET')
     for merge_request in merge_requests:
         if merge_request.get('merge_commit_sha') == commit_sha:
             if merge_request.get('description'):
@@ -168,10 +165,8 @@ def get_commit_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha):
     :return: A list containing the commit relevant changes
     :raise HTTPError: If there is an error in HTTP request
     """
-    request = Request('{}/api/v4/projects/{}/repository/commits/{}'.format(gitlab_endpoint, project_id, commit_sha),
-                      headers={'PRIVATE-TOKEN': gitlab_token}, method='GET')
-    response = urlopen(request).read()
-    commit = json.loads(response)
+    commit = _request('{}/api/v4/projects/{}/repository/commits/{}'.format(gitlab_endpoint, project_id, commit_sha),
+                      gitlab_token=gitlab_token, method='GET')
     return clean_content(commit.get('title'))
 
 
@@ -204,11 +199,10 @@ def generate_changelog(version, version_changes, changelog_file_path):
     - The current date
 
     :param str version: The version
-    :param str version_changes: The version changes
-    :param str changelog_file: The chagelog file path
+    :param list version_changes: The version changes
+    :param str changelog_file_path: The changelog file path
     :raise NoChanges: If version changes is empty
     """
-    # TODO: probably need to import pytz - uncomment test when finished
     if version_changes:
         now = datetime.strftime(datetime.now(), '%a, %b %d %Y %H:%M:%S %z %Z')
         with open(changelog_file_path, mode='r') as file:
@@ -246,16 +240,17 @@ def git_tag(tag):
         raise TagError(return_code)
 
 
-def git_push():
+def git_push(target_branch):
     """It pushes commits and tags to repository
 
+    :param str target_branch: The target branch name
     :raise PushError: If any error happends during push
     """
-    process = subprocess.Popen(['git', 'push', 'origin', 'master'], stdout=subprocess.PIPE)
+    process = subprocess.Popen(['git', 'push', 'origin', target_branch], stdout=subprocess.PIPE)
     return_code = process.wait()
     if return_code != 0:
         raise PushError(return_code)
-    process = subprocess.Popen(['git', 'push', 'origin', 'master', '--tags'], stdout=subprocess.PIPE)
+    process = subprocess.Popen(['git', 'push', 'origin', target_branch, '--tags'], stdout=subprocess.PIPE)
     return_code = process.wait()
     if return_code != 0:
         raise PushError(return_code)
@@ -268,7 +263,7 @@ def git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, 
     :param str gitlab_token: The gitlab api token
     :param str project_id: The project identifier
     :param str target_branch: The target branch name
-    :param str version_changes: The version changes
+    :param list version_changes: The version changes
     :rtype: str
     :return: The created merge request iid
     :raise HTTPError: If there is an error in HTTP request
@@ -285,22 +280,18 @@ def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_
     :param str gitlab_endpoint: The gitlab api endpoint
     :param str gitlab_token: The gitlab api token
     :param str project_id: The project identifier
-    :param str version_changes: The version changes
+    :param list version_changes: The version changes
     :rtype: str
     :return: The created merge request iid
     :raise HTTPError: If there is an error in HTTP request
     """
     # TODO: Parameterize user info
-    request = Request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
-                      headers={'PRIVATE-TOKEN': gitlab_token, 'content-type': 'application/json'},
-                      method='POST',
-                      data=json.dumps({'source_branch': 'master', 'target_branch': 'develop',
-                                       'title': 'Automatic merge branch \'master\' into \'develop\'',
-                                       'description': '- {}\n\n- - - \n\n- [ ] @brunabxs'
-                                                      .format('\n- '.join(version_changes))})
-                               .encode('utf-8'))
-    response = urlopen(request).read()
-    merge_request = json.loads(response)
+    merge_request = _request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
+                             gitlab_token=gitlab_token, method='POST',
+                             data={'source_branch': 'master', 'target_branch': 'develop',
+                                   'title': 'Automatic merge branch \'master\' into \'develop\'',
+                                   'description': '- {}\n\n- - - \n\n- [ ] @brunabxs'
+                                                  .format('\n- '.join(version_changes))})
     return merge_request['iid']
 
 
@@ -313,13 +304,19 @@ def git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_re
     :param str merge_request_iid: The merge request iid to approve
     :raise HTTPError: If there is an error in HTTP request
     """
-    request = Request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id,
-                                                                             merge_request_iid),
-                      headers={'PRIVATE-TOKEN': gitlab_token}, method='PUT',
-                      data=json.dumps({'merge_commit_message': 'Automatic merge branch \'master\' into \'develop\''})
-                               .encode('utf-8'))
-    response = urlopen(request).read()
-    json.loads(response)
+    _request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id, merge_request_iid),
+             gitlab_token=gitlab_token, method='PUT',
+             data={'merge_commit_message': 'Automatic merge branch \'master\' into \'develop\''})
+
+
+def _request(url, gitlab_token, method='GET', data=None):
+    request = Request(url, headers={'PRIVATE-TOKEN': gitlab_token, 'content-type': 'application/json'},
+                      method=method, data=json.dumps(data).encode('utf-8') if data else None)
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    response = urlopen(request, context=context).read().decode('utf-8')
+    return json.loads(response)
 
 
 if __name__ == '__main__':

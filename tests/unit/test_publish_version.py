@@ -25,7 +25,7 @@ class TestPublishVersion(unittest.TestCase):
                                                 mock_git_commit, mock_git_tag, mock_git_push,
                                                 mock_git_merge_request):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file')
-        mock_get_current_version.assert_called_once()
+        mock_get_current_version.assert_called_once_with('file')
 
     def test_branch_develop_must_call_generate_version_with_rc(self, mock_get_current_version,
                                                                mock_generate_version, mock_get_version_changes,
@@ -48,7 +48,7 @@ class TestPublishVersion(unittest.TestCase):
                                                 mock_git_commit, mock_git_tag, mock_git_push,
                                                 mock_git_merge_request):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file')
-        mock_get_version_changes.assert_called_once()
+        mock_get_version_changes.assert_called_once_with('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha')
 
     def test_get_version_succeeds_must_call_generate_changelog_once(self, mock_get_current_version,
                                                                     mock_generate_version, mock_get_version_changes,
@@ -124,7 +124,7 @@ class TestPublishVersion(unittest.TestCase):
                                                       mock_git_commit, mock_git_tag, mock_git_push,
                                                       mock_git_merge_request):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file')
-        mock_git_push.assert_called_once()
+        mock_git_push.assert_called_once_with('branch')
 
     def test_git_tag_fails_must_raise_tag_error(self, mock_get_current_version, mock_generate_version,
                                                 mock_get_version_changes, mock_generate_changelog,

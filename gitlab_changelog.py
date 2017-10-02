@@ -271,11 +271,11 @@ def git_new_merge_request(gitlab_endpoint, gitlab_token, project_id, target_bran
     :param str version_changes: The version changes
     :raise HTTPError: If there is an error in HTTP request
     """
-    if target_branch is not 'master':
+    if target_branch != 'master':
         return
     # TODO: Parameterize user info
     request = Request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
-                      headers={'PRIVATE-TOKEN': gitlab_token},
+                      headers={'PRIVATE-TOKEN': gitlab_token, 'content-type': 'application/json'},
                       data=json.dumps({'source_branch': 'master', 'target_branch': 'develop',
                                        'title': 'Automatic merge branch \'master\' into \'develop\'',
                                        'description': '- {}\n\n- - - \n\n- [ ] @brunabxs'
@@ -286,7 +286,7 @@ def git_new_merge_request(gitlab_endpoint, gitlab_token, project_id, target_bran
 
     request = Request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id,
                                                                              merge_request['iid']),
-                      headers={'PRIVATE-TOKEN': gitlab_token},
+                      headers={'PRIVATE-TOKEN': gitlab_token}, method='PUT',
                       data=json.dumps({'merge_commit_message ': 'Automatic merge branch \'master\' into \'develop\''})
                                .encode('utf-8'))
     response = urlopen(request).read()

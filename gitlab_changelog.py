@@ -291,6 +291,8 @@ def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_
     :raise HTTPError: If there is an error in HTTP request
     """
     # TODO: Parameterize user info
+    # TODO: Check if branch develop exists, otherwise skip this
+    # TODO: If merge request cannot be created because there is one (status code = ???) the build fails
     merge_request = _request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
                              gitlab_token=gitlab_token, method='POST',
                              data={'source_branch': 'master', 'target_branch': 'develop',
@@ -309,6 +311,8 @@ def git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_re
     :param str merge_request_iid: The merge request iid to approve
     :raise HTTPError: If there is an error in HTTP request
     """
+    # TODO: Check if merge request exists otherwise skip this
+    # TODO: If merge request cannot be accepted because there are conclicts (status code = 405) the build fails
     _request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id, merge_request_iid),
              gitlab_token=gitlab_token, method='PUT',
              data={'merge_commit_message': 'Automatic merge branch \'master\' into \'develop\''})

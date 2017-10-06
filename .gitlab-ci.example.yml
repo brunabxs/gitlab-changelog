@@ -1,0 +1,35 @@
+image: python:3.6
+
+variables:
+  GIT_STRATEGY: clone
+
+before_script:
+  - mkdir -p ~/.ssh
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssl-client -y )'
+  - eval $(ssh-agent -s)
+  - ssh-add <(echo "$SSH_PRIVATE_KEY")
+  - '[[ -f /.dockerenv ]] && echo -e "HOST *\n\nStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  - pip install -r requirements.txt
+  
+
+stages:
+  - build
+
+job:
+  stage: build
+  script:
+    - CI_PUSH_REPO=$(echo "$CI_REPOSITORY_URL" | perl -pe 's#.*@(.+?(\:\d+)?)/#git@\1:#')
+    - CI_COMMIT_MESSAGE=$(git log --format=%B -n 1 "${CI_COMMIT_SHA}")
+    - CI_COMMIT_MESSAGE=${CI_COMMIT_MESSAGE,,}
+    - git config --global user.email "gitlab-bot@gitlab.com"
+    - git config --global user.name "GitLab Bot"
+    - git remote set-url origin "${CI_PUSH_REPO}"
+    - git checkout "${CI_COMMIT_REF_NAME}"
+    - wget https://raw.githubusercontent.com/brunabxs/gitlab-changelog/master/gitlab_changelog.py
+    - if [[ ! $CI_COMMIT_MESSAGE =~ (^update changelog.*) ]]; then python gitlab_changelog.py -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -sha "${CI_COMMIT_SHA}" -b "${CI_COMMIT_REF_NAME}"; fi
+    - rm gitlab_changelog.py
+  only:
+    - master
+    - develop
+  tags:
+    - docker

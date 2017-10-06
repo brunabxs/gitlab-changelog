@@ -13,13 +13,18 @@ You will also need a [Personal Access Token](https://docs.gitlab.com/ee/api/READ
 ## Usage
 
 1. Copy `gitlab_changelog.py` file to the root of your project.
-2. Create two environment variables (optional):
-    - *GITLAB_API_ENDPOINT*: Must contain the Gitlab endpoint. Do not use / at the end. (e.g.: _https://gitlab.com_)
-    - *GITLAB_PERSONAL_ACCESS_TOKEN*: Must contain your Personal Access Token.
-3. Update your `.gitlab-ci.yml` to execute `gitlab_changelog.py` when a commit is made:
+2. [Generate a SSH key](https://docs.gitlab.com/ee/ssh/README.html).
+3. Create environment variables:
+    - *GITLAB_API_ENDPOINT* (optional): Must contain the Gitlab endpoint. Do not use / at the end. (e.g.: _https://gitlab.com_).
+    - *GITLAB_PERSONAL_ACCESS_TOKEN* (optional): Must contain your Personal Access Token.
+    - *SSH_PRIVATE_KEY*: Must contain the [SSH private key](https://docs.gitlab.com/ee/ci/ssh_keys/README.html#ssh-keys-when-using-the-docker-executor) if you are using GitLab shared runners.
+3. Add a [Deploy key](https://docs.gitlab.com/ee/ssh/README.html#deploy-keys) with the SSH public key.
+4. Update your `.gitlab-ci.yml` to execute `gitlab_changelog.py` when a commit is made:
 ```yml
 ...
 script:
   - python gitlab_changelog.py "${GITLAB_API_ENDPOINT}" "${GITLAB_PERSONAL_ACCESS_TOKEN}" "${CI_PROJECT_ID}" "${CI_COMMIT_SHA}"
 ...
 ```
+
+**Note**: You can use `.gitlab-ci.example.yml` as an example.

@@ -33,9 +33,14 @@ class PushError(Exception):
 
 def main(args):
     """Main function"""
-    publish_version(gitlab_endpoint=args['gitlab_endpoint'], gitlab_token=args['gitlab_token'],
-                    project_id=args['project_id'], commit_sha=args['commit_sha'],
-                    target_branch=args['target_branch'], changelog_file_path=args['changelog_file_path'])
+    if args['command'] == 'publish_version':
+        publish_version(gitlab_endpoint=args['gitlab_endpoint'], gitlab_token=args['gitlab_token'],
+                        project_id=args['project_id'], commit_sha=args['commit_sha'],
+                        target_branch=args['target_branch'], changelog_file_path=args['changelog_file_path'])
+    elif args['command'] == 'create_mr':
+        create_auto_merge_request(gitlab_endpoint=args['gitlab_endpoint'], gitlab_token=args['gitlab_token'],
+                                  project_id=args['project_id'], source_branch=args['source_branch'],
+                                  target_branch=args['target_branch'], tag_name=args['tag_name'])
 
 
 def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, target_branch, changelog_file_path):
@@ -59,9 +64,25 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     generate_changelog(version=new_version, version_changes=new_version_changes,
                        changelog_file_path=changelog_file_path)
     git_commit(target_branch, changelog_file_path)
-    git_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, new_version_changes, new_version)
+    git_create_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, new_version_changes, new_version)
     git_push(target_branch)
-    git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, new_version_changes)
+
+
+def create_auto_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, tag_name):
+    """It creates and approves a merge request depending on the target branch
+
+    :param str gitlab_endpoint: The gitlab api endpoint
+    :param str gitlab_token: The gitlab api token
+    :param str project_id: The project identifier
+    :param str source_branch: The source branch name
+    :param str target_branch: The target branch name
+    :param str tag_name: The tag name
+    :raise HTTPError: If there is an error in HTTP request
+    """
+    version_changes = git_get_tag_release_description(gitlab_endpoint, gitlab_token, project_id, tag_name)
+    merge_request_iid = git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch,
+                                                 target_branch, version_changes)
+    git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, merge_request_iid)
 
 
 def get_current_version(changelog_file_path):
@@ -236,7 +257,7 @@ def git_commit(target_branch, changelog_file_path):
     return process.stdout[0].strip()
 
 
-def git_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_changes, tag_name):
+def git_create_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_changes, tag_name):
     """It generates a tag
 
     :param str gitlab_endpoint: The gitlab api endpoint
@@ -253,11 +274,27 @@ def git_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_chang
              data={'tag_name': tag_name, 'ref': commit_sha, 'release_description': changes})
 
 
+def git_get_tag_release_description(gitlab_endpoint, gitlab_token, project_id, tag_name):
+    """It generates a tag
+
+    :param str gitlab_endpoint: The gitlab api endpoint
+    :param str gitlab_token: The gitlab api token
+    :param str project_id: The project identifier
+    :param str tag_name: The tag name
+    :rtype: list
+    :return: A list containing the release description of a given tag
+    :raise HTTPError: If there is an error in HTTP request
+    """
+    tag = _request('{}/api/v4/projects/{}/repository/tags/{}'.format(gitlab_endpoint, project_id, tag_name),
+                   gitlab_token=gitlab_token, method='GET')
+    return clean_content(tag['release'].get('description') if tag['release'] else None)
+
+
 def git_push(target_branch):
     """It pushes the commit to repository
 
     :param str target_branch: The target branch name
-    :raise PushError: If any error happends during push
+    :raise PushError: If any error happens during push
     """
     process = subprocess.Popen(['git', 'push', 'origin', target_branch], stdout=subprocess.PIPE)
     return_code = process.wait()
@@ -265,59 +302,47 @@ def git_push(target_branch):
         raise PushError(return_code)
 
 
-def git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, version_changes):
-    """It creates and approves a merge request depending on the target branch
-
-    :param str gitlab_endpoint: The gitlab api endpoint
-    :param str gitlab_token: The gitlab api token
-    :param str project_id: The project identifier
-    :param str target_branch: The target branch name
-    :param list version_changes: The version changes
-    :raise HTTPError: If there is an error in HTTP request
-    """
-    if target_branch != 'master':
-        return
-    merge_request_iid = git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_changes)
-    git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_request_iid)
-
-
-def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_changes):
+def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, version_changes):
     """It creates a merge request depending on the target branch
 
     :param str gitlab_endpoint: The gitlab api endpoint
     :param str gitlab_token: The gitlab api token
     :param str project_id: The project identifier
+    :param str source_branch: The source branch name
+    :param str target_branch: The target branch name
     :param list version_changes: The version changes
     :rtype: str
     :return: The created merge request iid
     :raise HTTPError: If there is an error in HTTP request
     """
-    # TODO: Parameterize user info
-    # TODO: Check if branch develop exists, otherwise skip this
     # TODO: If merge request cannot be created because there is one (status code = ???) the build fails
     merge_request = _request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
                              gitlab_token=gitlab_token, method='POST',
-                             data={'source_branch': 'master', 'target_branch': 'develop',
-                                   'title': 'Automatic merge branch \'master\' into \'develop\'',
+                             data={'source_branch': source_branch, 'target_branch': target_branch,
+                                   'title': 'Automatic merge branch \'{}\' into \'{}\''
+                                            .format(source_branch, target_branch),
                                    'description': '- {}\n\n- - - \n\n- [ ] @brunabxs'
                                                   .format('\n- '.join(version_changes))})
     return merge_request['iid']
 
 
-def git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_request_iid):
+def git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch,
+                             merge_request_iid):
     """It accepts a merge request
 
     :param str gitlab_endpoint: The gitlab api endpoint
     :param str gitlab_token: The gitlab api token
     :param str project_id: The project identifier
+    :param str source_branch: The source branch name
+    :param str target_branch: The target branch name
     :param str merge_request_iid: The merge request iid to approve
     :raise HTTPError: If there is an error in HTTP request
     """
     # TODO: Check if merge request exists otherwise skip this
-    # TODO: If merge request cannot be accepted because there are conclicts (status code = 405) the build fails
     _request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id, merge_request_iid),
              gitlab_token=gitlab_token, method='PUT',
-             data={'merge_commit_message': 'Automatic merge branch \'master\' into \'develop\''})
+             data={'merge_commit_message': 'Automatic merge branch \'{}\' into \'{}\''
+                                           .format(source_branch, target_branch)})
 
 
 def _request(url, gitlab_token, method='GET', data=None):
@@ -332,17 +357,36 @@ def _request(url, gitlab_token, method='GET', data=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate changelog for a given commit')
+    subparsers = parser.add_subparsers(dest='command')
 
-    parser.add_argument('-ge', '--gitlab_endpoint', dest='gitlab_endpoint', type=str,
-                        help='The gitlab api endpoint', required=True)
-    parser.add_argument('-gt', '--gitlab_token', dest='gitlab_token', type=str,
-                        help='The gitlab public access token', required=True)
-    parser.add_argument('-proj', '--project_id', dest='project_id', type=str,
-                        help='The gitlab project identifier', required=True)
-    parser.add_argument('-sha', '--commit_sha', dest='commit_sha', type=str,
-                        help='The commit SHA', required=True)
-    parser.add_argument('-b', '--target_branch', dest='target_branch', type=str,
-                        help='The commit target branch', required=True)
-    parser.add_argument('-f', '--changelog_file', dest='changelog_file_path', type=str,
-                        help='The changelog file path', default='CHANGELOG.md')
+    publish_version_parser = subparsers.add_parser('publish_version', help='publish_version help')
+
+    publish_version_parser.add_argument('-ge', '--gitlab_endpoint', dest='gitlab_endpoint', type=str,
+                                        help='The gitlab api endpoint', required=True)
+    publish_version_parser.add_argument('-gt', '--gitlab_token', dest='gitlab_token', type=str,
+                                        help='The gitlab public access token', required=True)
+    publish_version_parser.add_argument('-proj', '--project_id', dest='project_id', type=str,
+                                        help='The gitlab project identifier', required=True)
+    publish_version_parser.add_argument('-sha', '--commit_sha', dest='commit_sha', type=str,
+                                        help='The commit SHA', required=True)
+    publish_version_parser.add_argument('-t', '--target_branch', dest='target_branch', type=str,
+                                        help='The commit target branch', required=True)
+    publish_version_parser.add_argument('-f', '--changelog_file', dest='changelog_file_path', type=str,
+                                        help='The changelog file path', default='CHANGELOG.md')
+
+    create_auto_mr_parser = subparsers.add_parser('create_mr', help='create_mr help')
+
+    create_auto_mr_parser.add_argument('-ge', '--gitlab_endpoint', dest='gitlab_endpoint', type=str,
+                                       help='The gitlab api endpoint', required=True)
+    create_auto_mr_parser.add_argument('-gt', '--gitlab_token', dest='gitlab_token', type=str,
+                                       help='The gitlab public access token', required=True)
+    create_auto_mr_parser.add_argument('-proj', '--project_id', dest='project_id', type=str,
+                                       help='The gitlab project identifier', required=True)
+    create_auto_mr_parser.add_argument('-s', '--source_branch', dest='target_branch', type=str,
+                                       help='The merge request source branch', required=True)
+    create_auto_mr_parser.add_argument('-t', '--target_branch', dest='target_branch', type=str,
+                                       help='The merge request target branch', required=True)
+    create_auto_mr_parser.add_argument('-tag', dest='tag_name', type=str,
+                                       help='The tag name', required=True)
+
     main(vars(parser.parse_args()))

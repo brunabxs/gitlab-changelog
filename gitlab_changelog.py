@@ -59,9 +59,25 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     generate_changelog(version=new_version, version_changes=new_version_changes,
                        changelog_file_path=changelog_file_path)
     git_commit(target_branch, changelog_file_path)
-    git_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, new_version_changes, new_version)
+    git_create_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, new_version_changes, new_version)
     git_push(target_branch)
-    git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, new_version_changes)
+
+
+def create_auto_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, tag_name):
+    """It creates and approves a merge request depending on the target branch
+
+    :param str gitlab_endpoint: The gitlab api endpoint
+    :param str gitlab_token: The gitlab api token
+    :param str project_id: The project identifier
+    :param str source_branch: The source branch name
+    :param str target_branch: The target branch name
+    :param str tag_name: The tag name
+    :raise HTTPError: If there is an error in HTTP request
+    """
+    version_changes = git_get_tag_release_description(gitlab_endpoint, gitlab_token, project_id, tag_name)
+    merge_request_iid = git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch,
+                                                 target_branch, version_changes)
+    git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_request_iid)
 
 
 def get_current_version(changelog_file_path):
@@ -236,7 +252,7 @@ def git_commit(target_branch, changelog_file_path):
     return process.stdout[0].strip()
 
 
-def git_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_changes, tag_name):
+def git_create_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_changes, tag_name):
     """It generates a tag
 
     :param str gitlab_endpoint: The gitlab api endpoint
@@ -253,6 +269,22 @@ def git_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_chang
              data={'tag_name': tag_name, 'ref': commit_sha, 'release_description': changes})
 
 
+def git_get_tag_release_description(gitlab_endpoint, gitlab_token, project_id, tag_name):
+    """It generates a tag
+
+    :param str gitlab_endpoint: The gitlab api endpoint
+    :param str gitlab_token: The gitlab api token
+    :param str project_id: The project identifier
+    :param str tag_name: The tag name
+    :rtype: list
+    :return: A list containing the release description of a given tag
+    :raise HTTPError: If there is an error in HTTP request
+    """
+    tag = _request('{}/api/v4/projects/{}/repository/tags/{}'.format(gitlab_endpoint, project_id, tag_name),
+                   gitlab_token=gitlab_token, method='GET')
+    return clean_content(tag['release']['description'])
+
+
 def git_push(target_branch):
     """It pushes the commit to repository
 
@@ -265,28 +297,14 @@ def git_push(target_branch):
         raise PushError(return_code)
 
 
-def git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, version_changes):
-    """It creates and approves a merge request depending on the target branch
-
-    :param str gitlab_endpoint: The gitlab api endpoint
-    :param str gitlab_token: The gitlab api token
-    :param str project_id: The project identifier
-    :param str target_branch: The target branch name
-    :param list version_changes: The version changes
-    :raise HTTPError: If there is an error in HTTP request
-    """
-    if target_branch != 'master':
-        return
-    merge_request_iid = git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_changes)
-    git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_request_iid)
-
-
-def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_changes):
+def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, version_changes):
     """It creates a merge request depending on the target branch
 
     :param str gitlab_endpoint: The gitlab api endpoint
     :param str gitlab_token: The gitlab api token
     :param str project_id: The project identifier
+    :param str source_branch: The source branch name
+    :param str target_branch: The target branch name
     :param list version_changes: The version changes
     :rtype: str
     :return: The created merge request iid
@@ -297,8 +315,9 @@ def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, version_
     # TODO: If merge request cannot be created because there is one (status code = ???) the build fails
     merge_request = _request('{}/api/v4/projects/{}/merge_requests'.format(gitlab_endpoint, project_id),
                              gitlab_token=gitlab_token, method='POST',
-                             data={'source_branch': 'master', 'target_branch': 'develop',
-                                   'title': 'Automatic merge branch \'master\' into \'develop\'',
+                             data={'source_branch': source_branch, 'target_branch': target_branch,
+                                   'title': 'Automatic merge branch \'{}\' into \'{}\''
+                                            .format(source_branch, target_branch),
                                    'description': '- {}\n\n- - - \n\n- [ ] @brunabxs'
                                                   .format('\n- '.join(version_changes))})
     return merge_request['iid']
@@ -314,7 +333,7 @@ def git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, merge_re
     :raise HTTPError: If there is an error in HTTP request
     """
     # TODO: Check if merge request exists otherwise skip this
-    # TODO: If merge request cannot be accepted because there are conclicts (status code = 405) the build fails
+    # TODO: If merge request cannot be accepted because there are conflicts (status code = 405) the build fails
     _request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id, merge_request_iid),
              gitlab_token=gitlab_token, method='PUT',
              data={'merge_commit_message': 'Automatic merge branch \'master\' into \'develop\''})

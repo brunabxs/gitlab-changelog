@@ -6,7 +6,7 @@ import unittest
 from unittest import mock
 from urllib.error import HTTPError
 
-from gitlab_changelog import publish_version, CommitError, PushError, TagError
+from gitlab_changelog import publish_version, CommitError, PushError
 
 
 @mock.patch('gitlab_changelog.git_merge_request')
@@ -125,23 +125,6 @@ class TestPublishVersion(unittest.TestCase):
                                                       mock_git_merge_request):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file')
         mock_git_push.assert_called_once_with('branch')
-
-    def test_git_tag_fails_must_raise_tag_error(self, mock_get_current_version, mock_generate_version,
-                                                mock_get_version_changes, mock_generate_changelog,
-                                                mock_git_commit, mock_git_tag, mock_git_push,
-                                                mock_git_merge_request):
-        mock_git_tag.side_effect = TagError
-        with self.assertRaises(TagError):
-            publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file')
-
-    def test_git_tag_fails_must_not_call_git_push(self, mock_get_current_version, mock_generate_version,
-                                                  mock_get_version_changes, mock_generate_changelog,
-                                                  mock_git_commit, mock_git_tag, mock_git_push,
-                                                  mock_git_merge_request):
-        mock_git_tag.side_effect = TagError
-        with self.assertRaises(TagError):
-            self.assertFalse(mock_git_push.called, publish_version(
-                'gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file'))
 
     def test_git_push_succeeds_must_call_git_merge_request_once(self, mock_get_current_version, mock_generate_version,
                                                                 mock_get_version_changes, mock_generate_changelog,

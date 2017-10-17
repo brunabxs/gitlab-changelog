@@ -1,32 +1,83 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import subprocess
+import json
 import unittest
 
 from unittest import mock
+from urllib.error import HTTPError
 
-from gitlab_changelog import git_tag, TagError
+from gitlab_changelog import git_tag
 
 
-@mock.patch('gitlab_changelog.subprocess.Popen')
+@mock.patch('gitlab_changelog.urlopen')
 class TestGitTag(unittest.TestCase):
     """This class tests the git_tag method"""
 
-    def mock_process(self, return_value):
-        mock_process = mock.Mock()
-        mock_process.wait.return_value = return_value
-        return mock_process
+    def mock_read(self, return_value):
+        mock_read = mock.MagicMock()
+        mock_read.read.return_value = return_value
+        return mock_read
 
-    def test_must_call_git_tag(self, mock_popen):
-        mock_popen.return_value = self.mock_process(0)
-        git_tag('tag_name')
-        mock_popen.assert_called_once_with(['git', 'tag', 'tag_name'], stdout=subprocess.PIPE)
+    def test_error_on_request_must_raise_http_error(self, mock_urlopen):
+        mock_urlopen.side_effect = HTTPError('url', 'cde', 'msg', 'hdrs', 'fp')
+        with self.assertRaises(HTTPError):
+            git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                    ['version_changes'], 'tag_name')
 
-    def test_process_return_code_not_zero_must_raise_tag_error(self, mock_popen):
-        mock_popen.return_value = self.mock_process(123)
-        with self.assertRaises(TagError):
-            git_tag('tag_name')
+    def test_must_request_api(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
+        git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                ['version_changes'], 'tag_name')
+        self.assertEqual(mock_urlopen.call_args[0][0].full_url,
+                         'https://gitlab.com/api/v4/projects/project_id/repository/tags')
+
+    def test_request_must_contain_header_private_token(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
+        git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                ['version_changes'], 'tag_name')
+        self.assertEqual(mock_urlopen.call_args[0][0].headers['Private-token'], 'gitlab_token')
+
+    def test_request_must_contain_header_content_type(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
+        git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                ['version_changes'], 'tag_name')
+        self.assertEqual(mock_urlopen.call_args[0][0].headers['Content-type'], 'application/json')
+
+    def test_request_must_contain_method_post(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
+        git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                ['version_changes'], 'tag_name')
+        self.assertEqual(mock_urlopen.call_args[0][0].method, 'POST')
+
+    def test_request_must_contain_body_with_tag_name(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
+        git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                ['version_changes'], 'tag_name')
+        decoded_data = mock_urlopen.call_args[0][0].data.decode('utf-8')
+        self.assertEqual(json.loads(decoded_data).get('tag_name'), 'tag_name')
+
+    def test_request_must_contain_body_with_ref(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
+        git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                ['version_changes'], 'tag_name')
+        decoded_data = mock_urlopen.call_args[0][0].data.decode('utf-8')
+        self.assertEqual(json.loads(decoded_data).get('ref'), 'commit_sha')
+
+    def test_request_must_contain_body_with_release_description(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
+        git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                ['version_changes'], 'tag_name')
+        decoded_data = mock_urlopen.call_args[0][0].data.decode('utf-8')
+        self.assertEqual(json.loads(decoded_data).get('release_description'),
+                         '- version_changes')
+
+    def test_multiple_changes_request_must_contain_body_with_release_description(self, mock_urlopen):
+        mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
+        git_tag('https://gitlab.com', 'gitlab_token', 'project_id', 'commit_sha',
+                ['chng1', 'chng2'], 'tag_name')
+        decoded_data = mock_urlopen.call_args[0][0].data.decode('utf-8')
+        self.assertEqual(json.loads(decoded_data).get('release_description'), '- chng1\n- chng2')
 
 
 if __name__ == '__main__':

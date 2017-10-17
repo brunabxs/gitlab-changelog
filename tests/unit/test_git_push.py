@@ -23,11 +23,6 @@ class TestGitPush(unittest.TestCase):
         git_push('target_branch')
         mock_popen.assert_any_call(['git', 'push', 'origin', 'target_branch'], stdout=subprocess.PIPE)
 
-    def test_must_call_git_push_tags(self, mock_popen):
-        mock_popen.return_value = self.mock_process(0)
-        git_push('target_branch')
-        mock_popen.assert_any_call(['git', 'push', 'origin', 'target_branch', '--tags'], stdout=subprocess.PIPE)
-
     def test_process_return_code_not_zero_must_raise_push_error(self, mock_popen):
         mock_popen.return_value = self.mock_process(123)
         with self.assertRaises(PushError):

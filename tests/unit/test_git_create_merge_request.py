@@ -45,7 +45,7 @@ class TestGitCreateMergeRequest(unittest.TestCase):
         git_create_merge_request('https://gitlab.com', 'gitlab_token', 'project_id', ['version_changes'])
         self.assertEqual(mock_urlopen.call_args[0][0].headers['Content-type'], 'application/json')
 
-    def test_request_must_contain_method_put(self, mock_urlopen):
+    def test_request_must_contain_method_post(self, mock_urlopen):
         mock_urlopen.return_value = self.mock_read(str.encode('{"iid": "iid"}'))
         git_create_merge_request('https://gitlab.com', 'gitlab_token', 'project_id', ['version_changes'])
         self.assertEqual(mock_urlopen.call_args[0][0].method, 'POST')

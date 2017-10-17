@@ -31,11 +31,6 @@ class PushError(Exception):
     pass
 
 
-class TagError(Exception):
-    """Tag error"""
-    pass
-
-
 def main(args):
     """Main function"""
     publish_version(gitlab_endpoint=args['gitlab_endpoint'], gitlab_token=args['gitlab_token'],
@@ -64,7 +59,7 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     generate_changelog(version=new_version, version_changes=new_version_changes,
                        changelog_file_path=changelog_file_path)
     git_commit(target_branch, changelog_file_path)
-    git_tag(new_version)
+    git_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, new_version_changes, new_version)
     git_push(target_branch)
     git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, new_version_changes)
 
@@ -220,7 +215,9 @@ def git_commit(target_branch, changelog_file_path):
 
     :param str target_branch: The target branch name
     :param str changelog_file_path: The changelog file path
-    :raise CommitError: If any error happends during commit
+    :rtype: str
+    :return: The commit SHA
+    :raise CommitError: If any error happens during commit
     """
     process = subprocess.Popen(['git', 'add', changelog_file_path], stdout=subprocess.PIPE)
     return_code = process.wait()
@@ -231,31 +228,38 @@ def git_commit(target_branch, changelog_file_path):
     return_code = process.wait()
     if return_code != 0:
         raise CommitError(return_code)
-
-
-def git_tag(tag):
-    """It generates a tag
-
-    :param str tag: The tag name
-    :raise TagError: If any error happends during tag
-    """
-    process = subprocess.Popen(['git', 'tag', tag], stdout=subprocess.PIPE)
+    process = subprocess.Popen(['git', 'log', '--format=%H', '-n', '1'], stdout=subprocess.PIPE)
     return_code = process.wait()
     if return_code != 0:
-        raise TagError(return_code)
+        raise CommitError(return_code)
+
+    return process.stdout[0].strip()
+
+
+def git_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_changes, tag_name):
+    """It generates a tag
+
+    :param str gitlab_endpoint: The gitlab api endpoint
+    :param str gitlab_token: The gitlab api token
+    :param str project_id: The project identifier
+    :param str commit_sha: The commit SHA
+    :param list version_changes: The version changes
+    :param str tag_name: The tag name
+    :raise HTTPError: If there is an error in HTTP request
+    """
+    changes = '- {}'.format('\n- '.join(version_changes))
+    _request('{}/api/v4/projects/{}/repository/tags'.format(gitlab_endpoint, project_id),
+             gitlab_token=gitlab_token, method='POST',
+             data={'tag_name': tag_name, 'ref': commit_sha, 'release_description': changes})
 
 
 def git_push(target_branch):
-    """It pushes commits and tags to repository
+    """It pushes the commit to repository
 
     :param str target_branch: The target branch name
     :raise PushError: If any error happends during push
     """
     process = subprocess.Popen(['git', 'push', 'origin', target_branch], stdout=subprocess.PIPE)
-    return_code = process.wait()
-    if return_code != 0:
-        raise PushError(return_code)
-    process = subprocess.Popen(['git', 'push', 'origin', target_branch, '--tags'], stdout=subprocess.PIPE)
     return_code = process.wait()
     if return_code != 0:
         raise PushError(return_code)
@@ -269,8 +273,6 @@ def git_merge_request(gitlab_endpoint, gitlab_token, project_id, target_branch, 
     :param str project_id: The project identifier
     :param str target_branch: The target branch name
     :param list version_changes: The version changes
-    :rtype: str
-    :return: The created merge request iid
     :raise HTTPError: If there is an error in HTTP request
     """
     if target_branch != 'master':

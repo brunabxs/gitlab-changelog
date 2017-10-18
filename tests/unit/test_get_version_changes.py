@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-
 from unittest import mock
 from urllib.error import HTTPError
 
 from gitlab_changelog import get_version_changes
+from tests.unit import BaseTest
 
 
-class TestGetVersionChanges(unittest.TestCase):
+class TestGetVersionChanges(BaseTest):
     """This class tests the get_version_changes method"""
 
     @mock.patch('gitlab_changelog.get_merge_request_changes', side_effect=HTTPError('url', 'cde', 'msg', 'hdrs', 'fp'))

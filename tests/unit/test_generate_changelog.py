@@ -2,19 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-
-from datetime import datetime
 from unittest import mock
 
 from gitlab_changelog import generate_changelog, NoChanges
+from tests.unit import BaseTest
 
 
-class TestGenerateChangelog(unittest.TestCase):
+class TestGenerateChangelog(BaseTest):
     """This class tests the generate_changelog method"""
-
-    def mock_utcnow(self, mock_datetime):
-        mock_datetime.now = mock.Mock(return_value=datetime(2017, 2, 15, 13, 5, 12))
-        mock_datetime.strftime = datetime.strftime
 
     def test_must_read_and_write_file(self):
         mock_file_open = mock.mock_open(read_data='')

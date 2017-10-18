@@ -2,22 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-
 from unittest import mock
 from urllib.error import HTTPError
 
 from gitlab_changelog import get_commit_changes
+from tests.unit import BaseTest
 
 
 @mock.patch('gitlab_changelog.clean_content', return_value=['title'])
 @mock.patch('gitlab_changelog.urlopen')
-class TestGetCommitChanges(unittest.TestCase):
+class TestGetCommitChanges(BaseTest):
     """This class tests the get_commit_changes method"""
-
-    def mock_read(self, return_value):
-        mock_read = mock.MagicMock()
-        mock_read.read.return_value = return_value
-        return mock_read
 
     def test_must_call_clean_content(self, mock_urlopen, mock_clean_content):
         mock_urlopen.return_value = self.mock_read(b'{"title": "title"}')

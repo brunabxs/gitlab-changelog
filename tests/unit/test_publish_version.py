@@ -6,6 +6,7 @@ from unittest import mock
 from urllib.error import HTTPError
 
 from gitlab_changelog import publish_version, CommitError, PushError
+from tests.unit import BaseTest
 
 
 @mock.patch('gitlab_changelog.git_push')
@@ -15,7 +16,7 @@ from gitlab_changelog import publish_version, CommitError, PushError
 @mock.patch('gitlab_changelog.get_version_changes', return_value=['change'])
 @mock.patch('gitlab_changelog.generate_version', return_value='1.2.3-rc.1')
 @mock.patch('gitlab_changelog.get_current_version', return_value='1.2.3')
-class TestPublishVersion(unittest.TestCase):
+class TestPublishVersion(BaseTest):
     """This class tests the publish_version method"""
 
     def test_must_call_get_current_version_once(self, mock_get_current_version, mock_generate_version,

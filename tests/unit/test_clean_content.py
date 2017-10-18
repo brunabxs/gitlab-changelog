@@ -4,9 +4,10 @@
 import unittest
 
 from gitlab_changelog import clean_content
+from tests.unit import BaseTest
 
 
-class TestCleanContent(unittest.TestCase):
+class TestCleanContent(BaseTest):
     """This class tests the clean_content method"""
 
     def test_empty_text_must_return_empty_list(self):

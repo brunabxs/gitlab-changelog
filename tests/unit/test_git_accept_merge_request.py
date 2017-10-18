@@ -3,21 +3,21 @@
 
 import json
 import unittest
-
 from unittest import mock
 from urllib.error import HTTPError
 
 from gitlab_changelog import git_accept_merge_request
+from tests.unit import BaseTest
 
 
 @mock.patch('gitlab_changelog.urlopen')
-class TestGitAcceptMergeRequest(unittest.TestCase):
+class TestGitAcceptMergeRequest(BaseTest):
     """This class tests the git_accept_merge_request method"""
 
-    def mock_read(self, return_value):
-        mock_read = mock.MagicMock()
-        mock_read.read.return_value = return_value
-        return mock_read
+    def test_404_error_on_request_must_not_raise_http_error(self, mock_urlopen):
+        mock_urlopen.side_effect = HTTPError('url', 404, 'msg', 'hdrs', 'fp')
+        git_accept_merge_request('https://gitlab.com', 'gitlab_token', 'project_id', 'source_branch',
+                                 'target_branch', 'iid')
 
     def test_error_on_request_must_raise_http_error(self, mock_urlopen):
         mock_urlopen.side_effect = HTTPError('url', 'cde', 'msg', 'hdrs', 'fp')

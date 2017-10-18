@@ -4,9 +4,10 @@
 import unittest
 
 from gitlab_changelog import generate_version, InvalidVersion
+from tests.unit import BaseTest
 
 
-class TestGenerateVersion(unittest.TestCase):
+class TestGenerateVersion(BaseTest):
     """This class tests the generate_version method"""
 
     def test_invalid_version_must_raise_error(self):

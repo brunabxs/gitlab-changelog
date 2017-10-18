@@ -2,22 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-
 from unittest import mock
 from urllib.error import HTTPError
 
 from gitlab_changelog import get_merge_request_changes
+from tests.unit import BaseTest
 
 
 @mock.patch('gitlab_changelog.clean_content')
 @mock.patch('gitlab_changelog.urlopen')
-class TestGetMergeRequestChanges(unittest.TestCase):
+class TestGetMergeRequestChanges(BaseTest):
     """This class tests the get_merge_request_changes method"""
-
-    def mock_read(self, return_value):
-        mock_read = mock.MagicMock()
-        mock_read.read.return_value = return_value
-        return mock_read
 
     def test_error_on_request_must_raise_http_error(self, mock_urlopen, mock_clean_content):
         mock_urlopen.side_effect = HTTPError('url', 'cde', 'msg', 'hdrs', 'fp')

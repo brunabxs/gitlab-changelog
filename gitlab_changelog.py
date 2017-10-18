@@ -8,6 +8,7 @@ import ssl
 import subprocess
 
 from datetime import datetime
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
@@ -221,6 +222,7 @@ def generate_changelog(version, version_changes, changelog_file_path):
     :param str changelog_file_path: The changelog file path
     :raise NoChanges: If version changes is empty
     """
+    _log(type='debug', message='Generating changelog for version {}'.format(version))
     if version_changes:
         now = datetime.strftime(datetime.now(), '%a, %b %d %Y %H:%M:%S %z %Z')
         with open(changelog_file_path, mode='r') as file:
@@ -230,7 +232,9 @@ def generate_changelog(version, version_changes, changelog_file_path):
             changes = '  - {}'.format('\n  - '.join(version_changes))
             file.write(entry_skeleton.format(version, changes, now, content))
     else:
+        _log(type='error', message='Error occurred while generating changelog for version {}'.format(version))
         raise NoChanges()
+    _log(type='debug', message='Changelog generated with success for version {}'.format(version))
 
 
 def git_commit(target_branch, changelog_file_path):
@@ -242,21 +246,10 @@ def git_commit(target_branch, changelog_file_path):
     :return: The commit SHA
     :raise CommitError: If any error happens during commit
     """
-    process = subprocess.Popen(['git', 'add', changelog_file_path], stdout=subprocess.PIPE)
-    return_code = process.wait()
-    if return_code != 0:
-        raise CommitError(return_code)
-    process = subprocess.Popen(['git', 'commit', '-m', 'Update changelog ({})'.format(target_branch)],
-                               stdout=subprocess.PIPE)
-    return_code = process.wait()
-    if return_code != 0:
-        raise CommitError(return_code)
-    process = subprocess.Popen(['git', 'log', '--format=%H', '-n', '1'], stdout=subprocess.PIPE)
-    return_code = process.wait()
-    if return_code != 0:
-        raise CommitError(return_code)
-    stdout = process.stdout.readlines()
-    return stdout[0].strip()
+    _command(command='git add {}'.format(changelog_file_path), exception=CommitError)
+    _command(command=['git', 'commit', '-m', 'Update changelog ({})'.format(target_branch)], exception=CommitError)
+    stdout = _command(command='git log --format=%H -n 1'.format(target_branch), exception=CommitError)
+    return stdout[0].decode('utf-8').strip()
 
 
 def git_create_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_changes, tag_name):
@@ -298,10 +291,7 @@ def git_push(target_branch):
     :param str target_branch: The target branch name
     :raise PushError: If any error happens during push
     """
-    process = subprocess.Popen(['git', 'push', 'origin', target_branch], stdout=subprocess.PIPE)
-    return_code = process.wait()
-    if return_code != 0:
-        raise PushError(return_code)
+    _command(command='git push origin {}'.format(target_branch), exception=PushError)
 
 
 def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, users,
@@ -344,11 +334,29 @@ def git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, source_b
     :param str merge_request_iid: The merge request iid to approve
     :raise HTTPError: If there is an error in HTTP request
     """
-    # TODO: Check if merge request exists otherwise skip this
-    _request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id, merge_request_iid),
-             gitlab_token=gitlab_token, method='PUT',
-             data={'merge_commit_message': 'Automatic merge branch \'{}\' into \'{}\''
-                                           .format(source_branch, target_branch)})
+    try:
+        _request('{}/api/v4/projects/{}/merge_requests/{}/merge'.format(gitlab_endpoint, project_id, merge_request_iid),
+                 gitlab_token=gitlab_token, method='PUT',
+                 data={'merge_commit_message': 'Automatic merge branch \'{}\' into \'{}\''
+                                               .format(source_branch, target_branch)})
+    except HTTPError as error:
+        if error.code == 404:
+            _log(type='warning', message='Could not accept merge request because it could not be found. Skipping.')
+        else:
+            raise error
+
+
+def _command(command, exception=Exception):
+    _log(type='debug', message='Running command {}'.format(command))
+    if type(command) == str:
+        process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
+    else:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE)
+    return_code = process.wait()
+    if return_code != 0:
+        _log(type='error', message='Error occurred while executing command {}. [Code={}]'.format(command, return_code))
+        raise exception(return_code)
+    return process.stdout.readlines()
 
 
 def _request(url, gitlab_token, method='GET', data=None):
@@ -357,8 +365,19 @@ def _request(url, gitlab_token, method='GET', data=None):
     context = ssl.create_default_context()
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
-    response = urlopen(request, context=context).read().decode('utf-8')
-    return json.loads(response)
+    _log(type='debug', message='Sending {} request to {}'.format(method, url))
+    try:
+        response = urlopen(request, context=context).read().decode('utf-8')
+        _log(type='debug', message='Response retrieved with success')
+        return json.loads(response)
+    except HTTPError as error:
+        _log(type='error', message='Error occurred while retrieving response. [Code={}, Message={}]'
+                                   .format(error.code, error.msg))
+        raise error
+
+
+def _log(type, message):
+    print('[{}] {}'.format(type, message))
 
 
 if __name__ == '__main__':

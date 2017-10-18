@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-
 from unittest import mock
 
 from gitlab_changelog import get_current_version
+from tests.unit import BaseTest
 
 
-class TestGetCurrentVersion(unittest.TestCase):
+class TestGetCurrentVersion(BaseTest):
     """This class tests the get_current_version method"""
 
     def test_must_read_file(self):

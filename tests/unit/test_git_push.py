@@ -3,20 +3,15 @@
 
 import subprocess
 import unittest
-
 from unittest import mock
 
 from gitlab_changelog import git_push, PushError
+from tests.unit import BaseTest
 
 
 @mock.patch('gitlab_changelog.subprocess.Popen')
-class TestGitPush(unittest.TestCase):
+class TestGitPush(BaseTest):
     """This class tests the git_push method"""
-
-    def mock_process(self, return_value):
-        mock_process = mock.Mock()
-        mock_process.wait.return_value = return_value
-        return mock_process
 
     def test_must_call_git_push(self, mock_popen):
         mock_popen.return_value = self.mock_process(0)

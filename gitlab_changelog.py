@@ -66,8 +66,8 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     generate_changelog(version=new_version, version_changes=new_version_changes,
                        changelog_file_path=changelog_file_path)
     changelog_commit_sha = git_commit(target_branch, changelog_file_path)
-    git_create_tag(gitlab_endpoint, gitlab_token, project_id, changelog_commit_sha, new_version_changes, new_version)
     git_push(target_branch)
+    git_create_tag(gitlab_endpoint, gitlab_token, project_id, changelog_commit_sha, new_version_changes, new_version)
 
 
 def create_auto_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, users, tag_name):

@@ -15,7 +15,7 @@ before_script:
 stages:
   - build
 
-job:
+publish_version:
   stage: build
   script:
     - CI_PUSH_REPO=$(echo "$CI_REPOSITORY_URL" | perl -pe 's#.*@(.+?(\:\d+)?)/#git@\1:#')
@@ -34,13 +34,13 @@ job:
   tags:
     - docker
 
-job:
+create_mr:
   stage: build
   script:
     - wget https://raw.githubusercontent.com/brunabxs/gitlab-changelog/master/gitlab_changelog.py
-    - if [[ ! $CI_COMMIT_TAG =~ (^stable.*) ]]; then python gitlab_changelog.py create_mr -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -s master -t develop -tag "${CI_COMMIT_TAG}"; fi
+    - python gitlab_changelog.py create_mr -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -s master -t develop -tag "${CI_COMMIT_TAG}"
     - rm gitlab_changelog.py
   only:
-    - tags
+    - /^\d+\.\d+\.\d+$/
   tags:
     - docker

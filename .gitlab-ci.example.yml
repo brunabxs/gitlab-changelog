@@ -26,10 +26,21 @@ job:
     - git remote set-url origin "${CI_PUSH_REPO}"
     - git checkout "${CI_COMMIT_REF_NAME}"
     - wget https://raw.githubusercontent.com/brunabxs/gitlab-changelog/master/gitlab_changelog.py
-    - if [[ ! $CI_COMMIT_MESSAGE =~ (^update changelog.*) ]]; then python gitlab_changelog.py -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -sha "${CI_COMMIT_SHA}" -b "${CI_COMMIT_REF_NAME}"; fi
+    - if [[ ! $CI_COMMIT_MESSAGE =~ (^update changelog.*) ]]; then python gitlab_changelog.py publish_version -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -sha "${CI_COMMIT_SHA}" -t "${CI_COMMIT_REF_NAME}"; fi
     - rm gitlab_changelog.py
   only:
     - master
     - develop
+  tags:
+    - docker
+
+job:
+  stage: build
+  script:
+    - wget https://raw.githubusercontent.com/brunabxs/gitlab-changelog/master/gitlab_changelog.py
+    - if [[ ! $CI_COMMIT_TAG =~ (^stable.*) ]]; then python gitlab_changelog.py create_mr -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -s master -t develop -tag "${CI_COMMIT_TAG}"; fi
+    - rm gitlab_changelog.py
+  only:
+    - tags
   tags:
     - docker

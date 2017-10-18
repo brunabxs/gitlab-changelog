@@ -253,8 +253,8 @@ def git_commit(target_branch, changelog_file_path):
     return_code = process.wait()
     if return_code != 0:
         raise CommitError(return_code)
-
-    return process.stdout[0].strip()
+    stdout = process.stdout.readlines()
+    return stdout[0].strip()
 
 
 def git_create_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, version_changes, tag_name):

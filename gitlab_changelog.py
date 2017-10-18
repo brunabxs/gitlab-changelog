@@ -382,7 +382,7 @@ if __name__ == '__main__':
                                        help='The gitlab public access token', required=True)
     create_auto_mr_parser.add_argument('-proj', '--project_id', dest='project_id', type=str,
                                        help='The gitlab project identifier', required=True)
-    create_auto_mr_parser.add_argument('-s', '--source_branch', dest='target_branch', type=str,
+    create_auto_mr_parser.add_argument('-s', '--source_branch', dest='source_branch', type=str,
                                        help='The merge request source branch', required=True)
     create_auto_mr_parser.add_argument('-t', '--target_branch', dest='target_branch', type=str,
                                        help='The merge request target branch', required=True)

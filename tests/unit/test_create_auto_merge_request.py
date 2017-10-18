@@ -23,9 +23,9 @@ class TestCreateAutoMergeRequest(BaseTest):
                                                                      'tag_name')
 
     def test_git_get_tag_release_description_succeeds_must_call_git_create_merge_request_once(self,
-                                                                                              mock_git_get_tag_release_description,
-                                                                                              mock_git_create_merge_request,
-                                                                                              mock_git_accept_merge_request):
+                                                                                              mock_git_get_tag_release_description,  # NOQA
+                                                                                              mock_git_create_merge_request,  # NOQA
+                                                                                              mock_git_accept_merge_request):  # NOQA
         mock_git_get_tag_release_description.return_value = ['version_changes']
         create_auto_merge_request('gitlab_endpoint', 'gitlab_token', 'project_id', 'source_branch', 'target_branch',
                                   ['user1'], 'tag_name')
@@ -43,9 +43,9 @@ class TestCreateAutoMergeRequest(BaseTest):
                                       ['user1'], 'tag_name')
 
     def test_git_get_tag_release_description_fails_must_not_call_git_create_merge_request(self,
-                                                                                          mock_git_get_tag_release_description,
-                                                                                          mock_git_create_merge_request,
-                                                                                          mock_git_accept_merge_request):
+                                                                                          mock_git_get_tag_release_description,  # NOQA
+                                                                                          mock_git_create_merge_request,  # NOQA
+                                                                                          mock_git_accept_merge_request):  # NOQA
         mock_git_get_tag_release_description.side_effect = HTTPError('url', 'cde', 'msg', 'hdrs', 'fp')
         with self.assertRaises(HTTPError):
             self.assertFalse(mock_git_create_merge_request.called, create_auto_merge_request('gitlab_endpoint',
@@ -56,7 +56,7 @@ class TestCreateAutoMergeRequest(BaseTest):
                                                                                              ['user1'], 'tag_name'))
 
     def test_git_create_merge_request_succeeds_must_call_git_accept_merge_request_once(self,
-                                                                                       mock_git_get_tag_release_description,
+                                                                                       mock_git_get_tag_release_description,  # NOQA
                                                                                        mock_git_create_merge_request,
                                                                                        mock_git_accept_merge_request):
         mock_git_get_tag_release_description.return_value = ['version_changes']

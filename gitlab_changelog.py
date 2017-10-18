@@ -63,8 +63,8 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     new_version_changes = get_version_changes(gitlab_endpoint, gitlab_token, project_id, commit_sha)
     generate_changelog(version=new_version, version_changes=new_version_changes,
                        changelog_file_path=changelog_file_path)
-    git_commit(target_branch, changelog_file_path)
-    git_create_tag(gitlab_endpoint, gitlab_token, project_id, commit_sha, new_version_changes, new_version)
+    changelog_commit_sha = git_commit(target_branch, changelog_file_path)
+    git_create_tag(gitlab_endpoint, gitlab_token, project_id, changelog_commit_sha, new_version_changes, new_version)
     git_push(target_branch)
 
 

@@ -16,7 +16,7 @@ class TestGitCommit(unittest.TestCase):
     def mock_process(self, return_value):
         mock_process = mock.Mock()
         mock_process.wait.return_value = return_value
-        mock_process.stdout = ['commit_sha']
+        mock_process.stdout.readlines.return_value = [b'commit_sha\n']
         return mock_process
 
     def test_must_call_git_commit(self, mock_popen):

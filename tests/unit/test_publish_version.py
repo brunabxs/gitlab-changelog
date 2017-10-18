@@ -10,7 +10,7 @@ from gitlab_changelog import publish_version, CommitError, PushError
 
 @mock.patch('gitlab_changelog.git_push')
 @mock.patch('gitlab_changelog.git_create_tag')
-@mock.patch('gitlab_changelog.git_commit')
+@mock.patch('gitlab_changelog.git_commit', return_value='hash')
 @mock.patch('gitlab_changelog.generate_changelog')
 @mock.patch('gitlab_changelog.get_version_changes', return_value=['change'])
 @mock.patch('gitlab_changelog.generate_version', return_value='1.2.3-rc.1')
@@ -80,7 +80,7 @@ class TestPublishVersion(unittest.TestCase):
                                                                mock_get_version_changes, mock_generate_changelog,
                                                                mock_git_commit, mock_git_create_tag, mock_git_push):
         publish_version('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha', 'branch', 'file')
-        mock_git_create_tag.assert_called_once_with('gitlab_endpoint', 'gitlab_token', 'project_id', 'commit_sha',
+        mock_git_create_tag.assert_called_once_with('gitlab_endpoint', 'gitlab_token', 'project_id', 'hash',
                                                     ['change'], '1.2.3-rc.1')
 
     def test_git_commit_fails_must_raise_commit_error(self, mock_get_current_version, mock_generate_version,

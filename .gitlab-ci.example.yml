@@ -25,9 +25,9 @@ publish_version:
     - git config --global user.name "GitLab Bot"
     - git remote set-url origin "${CI_PUSH_REPO}"
     - git checkout "${CI_COMMIT_REF_NAME}"
-    - wget https://raw.githubusercontent.com/brunabxs/gitlab-changelog/master/gitlab_changelog.py
-    - if [[ ! $CI_COMMIT_MESSAGE =~ (^update changelog.*) ]]; then python gitlab_changelog.py publish_version -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -sha "${CI_COMMIT_SHA}" -t "${CI_COMMIT_REF_NAME}"; fi
-    - rm gitlab_changelog.py
+    - wget https://raw.githubusercontent.com/brunabxs/gitlab-changelog/master/ci_helper.py
+    - if [[ ! $CI_COMMIT_MESSAGE =~ (^update changelog.*) ]]; then python ci_helper.py publish_version -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -sha "${CI_COMMIT_SHA}" -t "${CI_COMMIT_REF_NAME}"; fi
+    - rm ci_helper.py
   only:
     - master
     - develop
@@ -37,9 +37,9 @@ publish_version:
 create_mr:
   stage: build
   script:
-    - wget https://raw.githubusercontent.com/brunabxs/gitlab-changelog/master/gitlab_changelog.py
-    - python gitlab_changelog.py create_mr -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -s master -t develop -tag "${CI_COMMIT_TAG}"
-    - rm gitlab_changelog.py
+    - wget https://raw.githubusercontent.com/brunabxs/gitlab-changelog/master/ci_helper.py
+    - python ci_helper.py create_mr -ge "${GITLAB_API_ENDPOINT}" -gt "${GITLAB_PERSONAL_ACCESS_TOKEN}" -proj "${CI_PROJECT_ID}" -s master -t develop -tag "${CI_COMMIT_TAG}"
+    - rm ci_helper.py
   only:
     - /^\d+\.\d+\.\d+$/
   tags:

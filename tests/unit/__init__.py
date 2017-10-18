@@ -9,7 +9,7 @@ from unittest import mock
 class BaseTest(unittest.TestCase):
 
     def setUp(self):
-        self.mock_log = mock.patch('gitlab_changelog._log')
+        self.mock_log = mock.patch('ci_helper._log')
         self.mock_log.start()
 
     def tearDown(self):

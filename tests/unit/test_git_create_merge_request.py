@@ -6,11 +6,11 @@ import unittest
 from unittest import mock
 from urllib.error import HTTPError
 
-from gitlab_changelog import git_create_merge_request
+from ci_helper import git_create_merge_request
 from tests.unit import BaseTest
 
 
-@mock.patch('gitlab_changelog.urlopen')
+@mock.patch('ci_helper.urlopen')
 class TestGitCreateMergeRequest(BaseTest):
     """This class tests the git_create_merge_request method"""
 

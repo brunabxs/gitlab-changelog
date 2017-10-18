@@ -5,12 +5,12 @@ import unittest
 from unittest import mock
 from urllib.error import HTTPError
 
-from gitlab_changelog import get_merge_request_changes
+from ci_helper import get_merge_request_changes
 from tests.unit import BaseTest
 
 
-@mock.patch('gitlab_changelog.clean_content')
-@mock.patch('gitlab_changelog.urlopen')
+@mock.patch('ci_helper.clean_content')
+@mock.patch('ci_helper.urlopen')
 class TestGetMergeRequestChanges(BaseTest):
     """This class tests the get_merge_request_changes method"""
 

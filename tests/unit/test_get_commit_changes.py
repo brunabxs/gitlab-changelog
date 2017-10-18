@@ -5,12 +5,12 @@ import unittest
 from unittest import mock
 from urllib.error import HTTPError
 
-from gitlab_changelog import get_commit_changes
+from ci_helper import get_commit_changes
 from tests.unit import BaseTest
 
 
-@mock.patch('gitlab_changelog.clean_content', return_value=['title'])
-@mock.patch('gitlab_changelog.urlopen')
+@mock.patch('ci_helper.clean_content', return_value=['title'])
+@mock.patch('ci_helper.urlopen')
 class TestGetCommitChanges(BaseTest):
     """This class tests the get_commit_changes method"""
 

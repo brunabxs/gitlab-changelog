@@ -5,11 +5,11 @@ import unittest
 from unittest import mock
 from urllib.error import HTTPError
 
-from gitlab_changelog import git_get_tag_release_description
+from ci_helper import git_get_tag_release_description
 from tests.unit import BaseTest
 
 
-@mock.patch('gitlab_changelog.urlopen')
+@mock.patch('ci_helper.urlopen')
 class TestGitGetTagReleaseDescription(BaseTest):
     """This class tests the git_get_tag_release_description method"""
 

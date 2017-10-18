@@ -5,13 +5,13 @@ import unittest
 from unittest import mock
 from urllib.error import HTTPError
 
-from gitlab_changelog import create_auto_merge_request
+from ci_helper import create_auto_merge_request
 from tests.unit import BaseTest
 
 
-@mock.patch('gitlab_changelog.git_accept_merge_request')
-@mock.patch('gitlab_changelog.git_create_merge_request')
-@mock.patch('gitlab_changelog.git_get_tag_release_description')
+@mock.patch('ci_helper.git_accept_merge_request')
+@mock.patch('ci_helper.git_create_merge_request')
+@mock.patch('ci_helper.git_get_tag_release_description')
 class TestCreateAutoMergeRequest(BaseTest):
     """This class tests the create_auto_merge_request method"""
 

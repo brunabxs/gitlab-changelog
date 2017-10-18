@@ -3,7 +3,7 @@
 
 import unittest
 
-from gitlab_changelog import generate_version, InvalidVersion
+from ci_helper import generate_version, InvalidVersion
 from tests.unit import BaseTest
 
 

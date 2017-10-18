@@ -3,7 +3,7 @@
 
 import unittest
 
-from gitlab_changelog import clean_content
+from ci_helper import clean_content
 from tests.unit import BaseTest
 
 

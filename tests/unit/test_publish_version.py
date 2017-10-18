@@ -5,17 +5,17 @@ import unittest
 from unittest import mock
 from urllib.error import HTTPError
 
-from gitlab_changelog import publish_version, CommitError, PushError
+from ci_helper import publish_version, CommitError, PushError
 from tests.unit import BaseTest
 
 
-@mock.patch('gitlab_changelog.git_create_tag')
-@mock.patch('gitlab_changelog.git_push')
-@mock.patch('gitlab_changelog.git_commit', return_value='hash')
-@mock.patch('gitlab_changelog.generate_changelog')
-@mock.patch('gitlab_changelog.get_version_changes', return_value=['change'])
-@mock.patch('gitlab_changelog.generate_version', return_value='1.2.3-rc.1')
-@mock.patch('gitlab_changelog.get_current_version', return_value='1.2.3')
+@mock.patch('ci_helper.git_create_tag')
+@mock.patch('ci_helper.git_push')
+@mock.patch('ci_helper.git_commit', return_value='hash')
+@mock.patch('ci_helper.generate_changelog')
+@mock.patch('ci_helper.get_version_changes', return_value=['change'])
+@mock.patch('ci_helper.generate_version', return_value='1.2.3-rc.1')
+@mock.patch('ci_helper.get_current_version', return_value='1.2.3')
 class TestPublishVersion(BaseTest):
     """This class tests the publish_version method"""
 

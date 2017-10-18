@@ -5,11 +5,11 @@ import subprocess
 import unittest
 from unittest import mock
 
-from gitlab_changelog import git_push, PushError
+from ci_helper import git_push, PushError
 from tests.unit import BaseTest
 
 
-@mock.patch('gitlab_changelog.subprocess.Popen')
+@mock.patch('ci_helper.subprocess.Popen')
 class TestGitPush(BaseTest):
     """This class tests the git_push method"""
 

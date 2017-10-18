@@ -40,7 +40,8 @@ def main(args):
     elif args['command'] == 'create_mr':
         create_auto_merge_request(gitlab_endpoint=args['gitlab_endpoint'], gitlab_token=args['gitlab_token'],
                                   project_id=args['project_id'], source_branch=args['source_branch'],
-                                  target_branch=args['target_branch'], tag_name=args['tag_name'])
+                                  target_branch=args['target_branch'], users=args['users'],
+                                  tag_name=args['tag_name'])
 
 
 def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, target_branch, changelog_file_path):
@@ -68,7 +69,7 @@ def publish_version(gitlab_endpoint, gitlab_token, project_id, commit_sha, targe
     git_push(target_branch)
 
 
-def create_auto_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, tag_name):
+def create_auto_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, users, tag_name):
     """It creates and approves a merge request depending on the target branch
 
     :param str gitlab_endpoint: The gitlab api endpoint
@@ -76,12 +77,13 @@ def create_auto_merge_request(gitlab_endpoint, gitlab_token, project_id, source_
     :param str project_id: The project identifier
     :param str source_branch: The source branch name
     :param str target_branch: The target branch name
+    :param list users: Name of each user that must be included to verify merge request
     :param str tag_name: The tag name
     :raise HTTPError: If there is an error in HTTP request
     """
     version_changes = git_get_tag_release_description(gitlab_endpoint, gitlab_token, project_id, tag_name)
     merge_request_iid = git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch,
-                                                 target_branch, version_changes)
+                                                 target_branch, users, version_changes)
     git_accept_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, merge_request_iid)
 
 
@@ -302,7 +304,8 @@ def git_push(target_branch):
         raise PushError(return_code)
 
 
-def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, version_changes):
+def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_branch, target_branch, users,
+                             version_changes):
     """It creates a merge request depending on the target branch
 
     :param str gitlab_endpoint: The gitlab api endpoint
@@ -310,6 +313,7 @@ def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_b
     :param str project_id: The project identifier
     :param str source_branch: The source branch name
     :param str target_branch: The target branch name
+    :param list users: Name of each user that must be included to verify merge request
     :param list version_changes: The version changes
     :rtype: str
     :return: The created merge request iid
@@ -321,8 +325,10 @@ def git_create_merge_request(gitlab_endpoint, gitlab_token, project_id, source_b
                              data={'source_branch': source_branch, 'target_branch': target_branch,
                                    'title': 'Automatic merge branch \'{}\' into \'{}\''
                                             .format(source_branch, target_branch),
-                                   'description': '- {}\n\n- - - \n\n- [ ] @brunabxs'
-                                                  .format('\n- '.join(version_changes))})
+                                   'description': '- {}{}{}'
+                                                  .format('\n- '.join(version_changes),
+                                                          '\n\n- - - \n\n- [ ] @' if users else '',
+                                                          '\n- [ ] @'.join(users) if users else '')})
     return merge_request['iid']
 
 
@@ -386,6 +392,9 @@ if __name__ == '__main__':
                                        help='The merge request source branch', required=True)
     create_auto_mr_parser.add_argument('-t', '--target_branch', dest='target_branch', type=str,
                                        help='The merge request target branch', required=True)
+    create_auto_mr_parser.add_argument('-u', '--users', dest='users', nargs='*',
+                                       help='The name of each user that needs to verify the merge request',
+                                       required=False)
     create_auto_mr_parser.add_argument('-tag', dest='tag_name', type=str,
                                        help='The tag name', required=True)
 
